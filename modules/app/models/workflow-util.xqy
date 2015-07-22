@@ -336,7 +336,7 @@ declare function m:evaluateOLD($processUri as xs:string,$namespaces as element(w
 };
 :)
 
-declare function m:evaluate($processUri as xs:string,$namespaces as element(wf:namespace)*,$xpath as xs:string) as xs:boolean {
+declare function m:evaluate($processUri as xs:string,$namespaces as element(wf:namespace)*,$xpath as xs:string) as item() {
   let $ns :=
     for $namespace in $namespaces
     return

@@ -10,11 +10,9 @@ declare namespace b2="http://www.omg.org/spec/BPMN/20100524/MODEL";
 import module namespace p="http://marklogic.com/cpf/pipelines" at "/MarkLogic/cpf/pipelines.xqy";
 import module namespace dom = "http://marklogic.com/cpf/domains" at "/MarkLogic/cpf/domains.xqy";
 
+import module namespace la = "http://marklogic.com/alerts/alerting" at "/app/models/lib-alerting.xqy";
 
 import module namespace stack="http://marklogic.com/stack" at "/app/models/lib-stack.xqy";
-
-
-import module namespace ss = "http://marklogic.com/alerts/alerts" at "/app/models/lib-alerts.xqy";
 
 (: TODO replace following outgoing routes with call to m:b2getNextSteps() :)
 
@@ -189,7 +187,7 @@ declare function m:convert-to-cpf($processmodeluri as xs:string,$major as xs:str
 
 declare function m:subscribe-process($subscriptionName as xs:string, $processuri as xs:string,$query as element(cts:query)) as xs:unsignedLong {
   (: TODO remove existing config with same subscription name, if it exists :)
-  ss:add-alert($subscriptionName,$query,(),"/app/models/action-process.xqy",xdmp:modules-database(),
+  la:add-alert($subscriptionName,$query,(),"/app/models/action-process.xqy",xdmp:modules-database(),
     <process-name>{$processuri}</process-name>)
 };
 

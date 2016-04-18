@@ -6,7 +6,7 @@ import module namespace cpf = "http://marklogic.com/cpf" at "/MarkLogic/cpf/cpf.
 import module namespace sem = "http://marklogic.com/semantics" at "/MarkLogic/semantics.xqy";
 
 
-import module namespace ss = "http://marklogic.com/search/subscribe" at "/app/models/lib-search-subscribe.xqy";
+import module namespace ss = "http://marklogic.com/alerts/alerting" at "/app/models/lib-alerting.xqy";
 
 declare namespace prop = "http://marklogic.com/xdmp/property";
 declare namespace wf="http://marklogic.com/workflow";
@@ -57,7 +57,7 @@ declare function m:createAlertingDomain($name as xs:string,$type as xs:string,$p
  : Create a new process subscription
  :)
 declare function m:createSubscription($pipelineName as xs:string,$name as xs:string,$domainname as xs:string,$query as cts:query) as xs:string {
-  let $alert-uri := ss:add-alert($name,$query,(),"/app/models/alert-action-process.xqy",xdmp:database-name(xdmp:modules-database()),
+  let $alert-uri := ss:add-alert($name,$query,(),"/app/models/alert-action-process.xqy",xdmp:modules-database(),
     (<wf:process-name>{$pipelineName}</wf:process-name>))
   let $alert-enabled := ss:cpf-enable($alert-uri,$domainname)
   return $alert-uri

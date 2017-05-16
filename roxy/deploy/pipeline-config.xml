@@ -1,0 +1,29 @@
+<config xmlns="http://marklogic.com/roxy/cpf">
+  <domains>
+    <!-- one <domain> for each cpf domain -->
+    <domain>
+      <name>Workflow Init Domain</name>
+      <description>This domain is awesome!!!</description>
+      <system-pipelines>
+        <system-pipeline>Status Change Handling</system-pipeline>
+      </system-pipelines>
+      <scope>
+        <type>directory</type>
+        <uri>/something/that/will/never/exist/</uri>
+        <depth>infinity</depth>
+      </scope>
+      <context>
+        <modules-database>@ml.modules-db</modules-database>
+        <root>/</root>
+      </context>
+      <restart-user>@ml.app-name-user</restart-user>
+      <!-- Permissions are optional -->
+      <permissions>
+        <permission>
+          <capability>execute</capability>
+          <role-name>@ml.app-role</role-name>
+        </permission>
+      </permissions>
+    </domain>
+  </domains>
+</config>

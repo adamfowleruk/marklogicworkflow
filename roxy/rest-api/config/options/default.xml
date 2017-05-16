@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<options xmlns="http://marklogic.com/appservices/search">
+  <search-option>unfiltered</search-option>
+  <quality-weight>0</quality-weight>
+</options>

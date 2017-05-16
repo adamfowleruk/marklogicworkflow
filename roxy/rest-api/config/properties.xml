@@ -1,0 +1,9 @@
+<rapi:properties xmlns:rapi="http://marklogic.com/rest-api">
+  <rapi:content-versions>none</rapi:content-versions>
+  <rapi:debug>false</rapi:debug>
+  <rapi:document-transform-all>true</rapi:document-transform-all>
+  <rapi:document-transform-out/>
+  <rapi:update-policy>merge-metadata</rapi:update-policy>
+  <rapi:validate-options>true</rapi:validate-options>
+  <rapi:validate-queries>false</rapi:validate-queries>
+</rapi:properties>

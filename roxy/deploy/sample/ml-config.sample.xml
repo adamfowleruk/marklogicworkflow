@@ -1,0 +1,608 @@
+<configuration default-group="${group}">
+  <!--
+    default-group applies to databases
+
+    ${group} defaults to "Default", you can override in build.properties or {env}.properties
+    Note: if you change ml.group, make sure to assign hosts to it! See <hosts> below.
+  -->
+  <groups xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://marklogic.com/xdmp/group" xsi:schemaLocation="http://marklogic.com/xdmp/group group.xsd">
+    <group>
+      <group-name>${group}</group-name>
+      <!--
+        Only enable the task server section if you need to.
+      <task-server>
+        <threads>16</threads>
+        <debug-threads>16</debug-threads>
+        <max-time-limit>3600</max-time-limit>
+        <default-time-limit>600</default-time-limit>
+        <queue-size>100000</queue-size>
+        <pre-commit-trigger-depth>1000</pre-commit-trigger-depth>
+        <post-commit-trigger-depth>1000</post-commit-trigger-depth>
+        <pre-commit-trigger-limit>10000</pre-commit-trigger-limit>
+        <log-errors>true</log-errors>
+        <debug-allow>true</debug-allow>
+        <profile-allow>true</profile-allow>
+        <scheduled-tasks>
+          <scheduled-task>
+            <task-path>/some/daily-task.xqy</task-path>
+            <task-root>/</task-root>
+            <task-type>daily</task-type>
+            <task-period>2</task-period>
+            <task-start-time>13:00:00-05:00</task-start-time>
+            <task-database name="${content-db}"/>
+            <task-modules name="${modules-db}"/>
+            <task-user name="${app-name}-user"/>
+          </scheduled-task>
+          <scheduled-task>
+            <task-path>/some/hourly-task.xqy</task-path>
+            <task-root>/</task-root>
+            <task-type>hourly</task-type>
+            <task-period>2</task-period>
+            <task-minute>15</task-minute>
+            <task-database name="${content-db}"/>
+            <task-modules name="${modules-db}"/>
+            <task-user name="${app-name}-user"/>
+          </scheduled-task>
+          <scheduled-task>
+            <task-path>/some/minutely-task.xqy</task-path>
+            <task-root>/</task-root>
+            <task-type>minutely</task-type>
+            <task-period>3</task-period>
+            <task-database name="${content-db}"/>
+            <task-modules name="${modules-db}"/>
+            <task-user name="${app-name}-user"/>
+          </scheduled-task>
+          <scheduled-task>
+            <task-path>/some/monthly-task.xqy</task-path>
+            <task-root>/</task-root>
+            <task-type>monthly</task-type>
+            <task-period>1</task-period>
+            <task-month-day>15</task-month-day>
+            <task-start-time>13:00:00-05:00</task-start-time>
+            <task-database name="${content-db}"/>
+            <task-modules name="${modules-db}"/>
+            <task-user name="${app-name}-user"/>
+          </scheduled-task>
+          <scheduled-task>
+            <task-path>/some/once-task.xqy</task-path>
+            <task-root>/</task-root>
+            <task-type>once</task-type>
+            <task-period>1</task-period>
+            <task-start>2019-01-01T13:00:00-05:00</task-start>
+            <task-database name="${content-db}"/>
+            <task-modules name="${modules-db}"/>
+            <task-user name="${app-name}-user"/>
+          </scheduled-task>
+          <scheduled-task>
+            <task-path>/some/weekly-task.xqy</task-path>
+            <task-root>/</task-root>
+            <task-type>weekly</task-type>
+            <task-period>1</task-period>
+            <task-days>
+              <task-day>monday</task-day>
+              <task-day>wednesday</task-day>
+              <task-day>friday</task-day>
+            </task-days>
+            <task-start-time>13:00:00-05:00</task-start-time>
+            <task-database name="${content-db}"/>
+            <task-modules name="${modules-db}"/>
+            <task-user name="${app-name}-user"/>
+          </scheduled-task>
+        </scheduled-tasks>
+      </task-server>
+      -->
+      <http-servers>
+        <!--Default Application Server-->
+        <http-server>
+          <http-server-name>${app-name}</http-server-name>
+          <port>${app-port}</port>
+          <database name="${content-db}"/>
+          <modules name="${modules-db}"/>
+          <root>${modules-root}</root>
+          <authentication>${authentication-method}</authentication>
+          <default-user name="${default-user}"/>
+          <url-rewriter>${url-rewriter}</url-rewriter>
+          <error-handler>${error-handler}</error-handler>
+          @ml.rewrite-resolves-globally
+          <!-- for external security use:
+
+          <internal-security>false</internal-security>
+          <external-security name="name-of-your-external-security-config"/>
+
+          -->
+
+          <!-- <ssl-certificate-template>@ml.ssl-certificate-template</ssl-certificate-template> -->
+        </http-server>
+        @ml.test-appserver
+        @ml.rest-appserver
+      </http-servers>
+      <xdbc-servers>
+        @ml.xdbc-server
+      </xdbc-servers>
+      <odbc-servers>
+        @ml.odbc-server
+      </odbc-servers>
+    </group>
+  </groups>
+  <!--
+    If you intend using groups other than "Default", make sure to assign at least one host per group!
+
+  <hosts xsi:schemaLocation="http://marklogic.com/xdmp/hosts hosts.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://marklogic.com/xdmp/hosts">
+    <host>
+      <host-name>@ml.server</host-name>
+      <group name="${group}"/>
+    </host>
+  </hosts>
+  -->
+
+  <!--Assignments-->
+  <assignments xmlns="http://marklogic.com/xdmp/assignments" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://marklogic.com/xdmp/assignments assignments.xsd">
+    <assignment>
+      <forest-name>${content-db}</forest-name>
+      @ml.forest-data-dir-xml
+    </assignment>
+    @ml.test-content-db-assignment
+    @ml.test-modules-db-assignment
+    @ml.rest-modules-db-assignment
+    <assignment>
+      <forest-name>${modules-db}</forest-name>
+    </assignment>
+    @ml.schemas-assignment
+    @ml.triggers-assignment
+  </assignments>
+  <!--
+    =========================================================
+    Databases that are created as part of the application
+    Add any database configuration or indexes here
+    =========================================================
+  -->
+  <databases xmlns="http://marklogic.com/xdmp/database" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://marklogic.com/xdmp/database database.xsd">
+    <!--Application Database Configuration-->
+    @ml.test-content-db-xml
+    @ml.rest-modules-db-xml
+    <database>
+      <database-name>${content-db}</database-name>
+      <forests-per-host>${content-forests-per-host}</forests-per-host>
+      @ml.schemas-mapping
+      @ml.triggers-mapping
+      <forests>
+        <forest-id name="${content-db}"/>
+        @ml.forest-data-dir-xml
+      </forests>
+
+      <!-- See sample/default-docs-config.sample.xml for default settings and indexes of Documents database -->
+
+      <uri-lexicon>true</uri-lexicon>
+      <collection-lexicon>true</collection-lexicon>
+      <directory-creation>manual</directory-creation>
+      <maintain-last-modified>false</maintain-last-modified>
+<!--
+      <fragment-roots>
+        <fragment-root>
+          <namespace-uri>http://www.marklogic.com/ns/sample</namespace-uri>
+          <localname>frag-root</localname>
+        </fragment-root>
+      </fragment-roots>
+      <fragment-parents>
+        <fragment-parent>
+          <namespace-uri>http://www.marklogic.com/ns/sample</namespace-uri>
+          <localname>frag-parents</localname>
+        </fragment-parent>
+      </fragment-parents>
+-->
+<!--
+      <fields>
+        <field>
+          <field-name></field-name>
+          <field-path>
+            <path>some/xpath</path>
+            <weight>1.0</weight>
+          </field-path>
+          <word-lexicons/>
+          <included-elements/>
+          <excluded-elements/>
+          <tokenizer-overrides/>
+          <stemmed-searches>basic</stemmed-searches>
+          <fast-phrase-searches>true</fast-phrase-searches>
+          <fast-case-sensitive-searches>true</fast-case-sensitive-searches>
+          <fast-diacritic-sensitive-searches>true</fast-diacritic-sensitive-searches>
+        </field>
+        <field>
+          <field-name/>
+          <include-root>true</include-root>
+          <fast-case-sensitive-searches>false</fast-case-sensitive-searches>
+          <fast-diacritic-sensitive-searches>false</fast-diacritic-sensitive-searches>
+          <fast-phrase-searches>false</fast-phrase-searches>
+          <one-character-searches>false</one-character-searches>
+          <stemmed-searches>basic</stemmed-searches>
+          <three-character-searches>false</three-character-searches>
+          <three-character-word-positions>false</three-character-word-positions>
+          <trailing-wildcard-searches>false</trailing-wildcard-searches>
+          <trailing-wildcard-word-positions>false</trailing-wildcard-word-positions>
+          <two-character-searches>false</two-character-searches>
+          <value-positions>false</value-positions>
+          <value-searches>false</value-searches>
+          <word-searches>false</word-searches>
+          <word-lexicons/>
+          <included-elements>
+            <included-element>
+              <namespace-uri>http://ns.com</namespace-uri>
+              <localname>blah</localname>
+              <weight>1.0</weight>
+              <attribute-namespace-uri/>
+              <attribute-localname/>
+              <attribute-value/>
+            </included-element>
+          </included-elements>
+          <excluded-elements/>
+        </field>
+      </fields>
+-->
+      <range-element-indexes>
+        <!--
+        Sample for:
+          <name xmlns="http://marklogic.com/ns/sample">bob<name>
+
+        <range-element-index>
+          <scalar-type>string</scalar-type>
+          <namespace-uri>http://marklogic.com/ns/sample</namespace-uri>
+          <localname>name</localname>
+          <collation>http://marklogic.com/collation/codepoint</collation>
+          <range-value-positions>false</range-value-positions>
+        </range-element-index>
+-->
+      </range-element-indexes>
+      <range-element-attribute-indexes>
+<!--
+        Sample for:
+          <person name="bob" xmlns="http://marklogic.com/ns/sample"/>
+
+        <range-element-attribute-index>
+          <scalar-type>string</scalar-type>
+          <parent-namespace-uri>http://marklogic.com/ns/sample</parent-namespace-uri>
+          <parent-localname>person</parent-localname>
+          <namespace-uri/>
+          <localname>name</localname>
+          <collation>http://marklogic.com/collation/codepoint</collation>
+          <range-value-positions>false</range-value-positions>
+        </range-element-attribute-index>
+-->
+      </range-element-attribute-indexes>
+      <range-field-indexes>
+<!--
+        <range-field-index>
+          <scalar-type>date</scalar-type>
+          <field-name>sample</field-name>
+          <collation/>
+          <range-value-positions>false</range-value-positions>
+          <invalid-values>ignore</invalid-values>
+        </range-field-index>
+-->
+      </range-field-indexes>
+
+      <path-namespaces>
+<!--
+        <path-namespace>
+          <prefix>sample</prefix>
+          <namespace-uri>http://marklogic.com/ns/sample</namespace-uri>
+        </path-namespace>
+-->
+      </path-namespaces>
+
+      <range-path-indexes>
+<!--
+        <range-path-index>
+          <scalar-type>string</scalar-type>
+          <collation>http://marklogic.com/collation/codepoint</collation>
+          <path-expression>/sample:root/sample:child</path-expression>
+          <range-value-positions>false</range-value-positions>
+          <invalid-values>reject</invalid-values>
+        </range-path-index>
+-->
+      </range-path-indexes>
+
+      <geospatial-element-indexes>
+<!--
+        <geospatial-element-index>
+          <namespace-uri>http://www.marklogic.com/ns/sample</namespace-uri>
+          <localname>geo-element</localname>
+          <coordinate-system>wgs84</coordinate-system>
+          <point-format>point</point-format>
+          <range-value-positions>false</range-value-positions>
+          <invalid-values>reject</invalid-values>
+        </geospatial-element-index>
+-->
+      </geospatial-element-indexes>
+
+      <geospatial-element-attribute-pair-indexes>
+<!--
+        Sample for:
+          <geo lat="37.237162" lon="-115.8099747" xmlns="http://marklogic.com/ns/sample"/>
+
+        <geospatial-element-attribute-pair-index>
+          <parent-namespace-uri>http://marklogic.com/ns/sample</parent-namespace-uri>
+          <parent-localname>geo</parent-localname>
+          <latitude-namespace-uri/>
+          <latitude-localname>lat</latitude-localname>
+          <longitude-namespace-uri/>
+          <longitude-localname>lon</longitude-localname>
+          <coordinate-system>wgs84</coordinate-system>
+          <range-value-positions>false</range-value-positions>
+        </geospatial-element-attribute-pair-index>
+-->
+      </geospatial-element-attribute-pair-indexes>
+      <geospatial-element-pair-indexes>
+<!--
+        Sample for:
+          <geo xmlns="http://marklogic.com/ns/sample">
+            <lat>37.237162</lat>
+            <lon>-115.8099747</lon>
+          </geo>
+
+        <geospatial-element-pair-index>
+          <parent-namespace-uri>http://marklogic.com/ns/sample</parent-namespace-uri>
+          <parent-localname>geo</parent-localname>
+          <latitude-namespace-uri>http://marklogic.com/ns/sample</latitude-namespace-uri>
+          <latitude-localname>lat</latitude-localname>
+          <longitude-namespace-uri>http://marklogic.com/ns/sample</longitude-namespace-uri>
+          <longitude-localname>lon</longitude-localname>
+          <coordinate-system>wgs84</coordinate-system>
+          <range-value-positions>true</range-value-positions>
+        </geospatial-element-pair-index>
+-->
+      </geospatial-element-pair-indexes>
+      <geospatial-element-child-indexes>
+<!--
+        Sample for:
+          <geo xmlns="http://marklogic.com/ns/sample">
+            <pos>37.237162,-115.8099747</pos>
+          </geo>
+
+        <geospatial-element-child-index>
+          <parent-namespace-uri>http://marklogic.com/ns/sample</parent-namespace-uri>
+          <parent-localname>geo</parent-localname>
+          <namespace-uri>http://marklogic.com/ns/sample</namespace-uri>
+          <localname>pos</localname>
+          <coordinate-system>wgs84</coordinate-system>
+          <point-format>point</point-format>
+          <range-value-positions>false</range-value-positions>
+        </geospatial-element-child-index>
+-->
+      </geospatial-element-child-indexes>
+      <element-word-lexicons>
+<!--
+        <element-word-lexicon>
+          <namespace-uri>http://www.marklogic.com/ns/sample</namespace-uri>
+          <localname>sample-element</localname>
+          <collation>http://marklogic.com/collation/</collation>
+        </element-word-lexicon>
+-->
+      </element-word-lexicons>
+      <element-attribute-word-lexicons>
+<!--
+        <element-attribute-word-lexicon>
+          <parent-namespace-uri>http://www.marklogic.com/ns/sample</parent-namespace-uri>
+          <parent-localname>sample-element</parent-localname>
+          <namespace-uri/>
+          <localname>sample-attribute</localname>
+          <collation>http://marklogic.com/collation/</collation>
+        </element-attribute-word-lexicon>
+-->
+      </element-attribute-word-lexicons>
+    </database>
+    <!--Create Application Modules Database-->
+    <database>
+      <database-name>${modules-db}</database-name>
+      <forests>
+        <forest-id name="${modules-db}"/>
+      </forests>
+      <stemmed-searches>off</stemmed-searches>
+      <word-searches>false</word-searches>
+      <word-positions>false</word-positions>
+      <fast-phrase-searches>false</fast-phrase-searches>
+      <fast-reverse-searches>false</fast-reverse-searches>
+      <fast-case-sensitive-searches>false</fast-case-sensitive-searches>
+      <fast-diacritic-sensitive-searches>false</fast-diacritic-sensitive-searches>
+      <fast-element-word-searches>false</fast-element-word-searches>
+      <element-word-positions>false</element-word-positions>
+      <fast-element-phrase-searches>false</fast-element-phrase-searches>
+      <element-value-positions>false</element-value-positions>
+      <attribute-value-positions>false</attribute-value-positions>
+      <three-character-searches>false</three-character-searches>
+      <three-character-word-positions>false</three-character-word-positions>
+      <fast-element-character-searches>false</fast-element-character-searches>
+      <trailing-wildcard-searches>false</trailing-wildcard-searches>
+      <trailing-wildcard-word-positions>false</trailing-wildcard-word-positions>
+      <fast-element-trailing-wildcard-searches>false</fast-element-trailing-wildcard-searches>
+      <word-lexicons/>
+      <two-character-searches>false</two-character-searches>
+      <one-character-searches>false</one-character-searches>
+      <uri-lexicon>true</uri-lexicon>
+      <collection-lexicon>false</collection-lexicon>
+      <directory-creation>automatic</directory-creation>
+      <maintain-last-modified>false</maintain-last-modified>
+    </database>
+    <!--Create Test Modules Database-->
+    @ml.test-modules-db-xml
+    <!--Create a Triggers Database-->
+    @ml.triggers-db-xml
+    @ml.schemas-db-xml
+  </databases>
+  <certificates xmlns="http://marklogic.com/xdmp/pki">
+    @ml.ssl-certificate-xml
+  </certificates>
+  <roles xmlns="http://marklogic.com/xdmp/security">
+    <role>
+      <role-name>${app-role}</role-name>
+      <description>A role for users of the ${app-name} application</description>
+      <role-names>
+      </role-names>
+      <permissions>
+        <permission>
+          <capability>execute</capability>
+          <role-name>${app-role}</role-name>
+        </permission>
+        <permission>
+          <capability>update</capability>
+          <role-name>${app-role}</role-name>
+        </permission>
+        <permission>
+          <capability>insert</capability>
+          <role-name>${app-role}</role-name>
+        </permission>
+        <permission>
+          <capability>read</capability>
+          <role-name>${app-role}</role-name>
+        </permission>
+      </permissions>
+      <collections>
+      </collections>
+      <privileges>
+        <privilege>
+          <privilege-name>rest-reader</privilege-name>
+        </privilege>
+        <privilege>
+          <privilege-name>xdmp:value</privilege-name>
+        </privilege>
+        <privilege>
+          <privilege-name>xdmp:add-response-header</privilege-name>
+        </privilege>
+        <privilege>
+          <privilege-name>xdmp:invoke</privilege-name>
+        </privilege>
+        <privilege>
+          <privilege-name>xdmp:with-namespaces</privilege-name>
+        </privilege>
+        <!-- START: required to run Roxy's rewriter-lib -->
+        <privilege>
+          <privilege-name>xdmp:get-server-field</privilege-name>
+        </privilege>
+        <privilege>
+          <privilege-name>xdmp:set-server-field</privilege-name>
+        </privilege>
+        <!-- END: required to run Roxy's rewriter-lib -->
+      </privileges>
+    </role>
+    <role>
+      <role-name>${app-role}-unit-test</role-name>
+      <description>A role for unit testing the ${app-name} application</description>
+      <role-names>
+        <role-name>${app-role}</role-name>
+      </role-names>
+      <privileges>
+        <!-- START: privileges needed for unit testing while running on filesystem -->
+        <privilege>
+          <privilege-name>xdmp:document-get</privilege-name>
+        </privilege>
+        <privilege>
+          <privilege-name>xdmp:filesystem-directory</privilege-name>
+        </privilege>
+        <privilege>
+          <privilege-name>xdmp:save</privilege-name>
+        </privilege>
+        <!-- END: privileges needed for unit testing while running on filesystem -->
+        <privilege>
+          <privilege-name>any-uri</privilege-name>
+        </privilege>
+        <privilege>
+          <privilege-name>xdmp:eval</privilege-name>
+        </privilege>
+        <privilege>
+          <privilege-name>xdmp:eval-in</privilege-name>
+        </privilege>
+        <privilege>
+          <privilege-name>xdmp:http-delete</privilege-name>
+        </privilege>
+        <privilege>
+          <privilege-name>xdmp:http-get</privilege-name>
+        </privilege>
+        <privilege>
+          <privilege-name>xdmp:http-head</privilege-name>
+        </privilege>
+        <privilege>
+          <privilege-name>xdmp:http-post</privilege-name>
+        </privilege>
+        <privilege>
+          <privilege-name>xdmp:http-put</privilege-name>
+        </privilege>
+      </privileges>
+    </role>
+  </roles>
+  <users xmlns="http://marklogic.com/xdmp/security">
+    <user>
+      <user-name>${app-name}-user</user-name>
+      <description>A user for the ${app-name} application</description>
+      <password>${appuser-password}</password>
+      <role-names>
+        <role-name>${app-role}</role-name>
+      </role-names>
+      <permissions/>
+      <collections/>
+    </user>
+    @ml.test-user-xml
+  </users>
+  <amps xmlns="http://marklogic.com/xdmp/security">
+    <!--
+      Sample amp. See the Understanding and Using Security Guide section 5.2 for
+      information about amps.
+      http://community.marklogic.com/pubs/5.0/books/security.pdf
+    <amp>
+      <namespace>http://marklogic.com/roxy</namespace>
+      <local-name>sample</local-name>
+      <doc-uri>/app/models/sample.xqy</doc-uri>
+      <db-name>${modules-db}</db-name>
+      <role-name>a-privileged-role</role-name>
+    </amp>
+    -->
+  </amps>
+  <privileges xmlns="http://marklogic.com/xdmp/security">
+<!--
+    Sample execute privilege.
+    <privilege>
+      <privilege-name>my-action</privilege-name>
+      <action>http://marklogic.com/custom/privilege/my-action</action>
+      <kind>execute</kind>
+    </privilege>
+-->
+<!--
+    Sample URI privilege.
+    <privilege>
+      <privilege-name>users-uri</privilege-name>
+      <action>/users/</action>
+      <kind>uri</kind>
+    </privilege>
+-->
+  </privileges>
+  <mimetypes xmlns="http://marklogic.com/xdmp/mimetypes">
+<!--
+    Sample mimetype.
+    <mimetype>
+      <name>application/crazy</name>
+      <extension>crazy stuff</extension>
+      <format>text</format>
+    </mimetype>
+-->
+  </mimetypes>
+<!--
+  <external-securities xmlns="http://marklogic.com/xdmp/security">
+    <external-security>
+      <external-security-name>test</external-security-name>
+      <description>a big test</description>
+      <authentication>ldap</authentication>
+      <cache-timeout>300</cache-timeout>
+      <authorization>ldap</authorization>
+      <ldap-server-uri>ldap://dc1.mltest1.local:389</ldap-server-uri>
+      <ldap-base>CN=Users,DC=MLTEST1,DC=LOCAL</ldap-base>
+      <ldap-attribute>sAMAccountName</ldap-attribute>
+      <ldap-default-user/>
+      <ldap-password/>
+    </external-security>
+  </external-securities>
+-->
+<!--
+  <credentials xmlns="http://marklogic.com/xdmp/security">
+    <aws-access-key>1234abc</aws-access-key>
+    <aws-secret-key>1234abc</aws-secret-key>
+  </credentials>
+-->
+</configuration>

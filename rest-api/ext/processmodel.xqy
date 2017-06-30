@@ -69,7 +69,6 @@ function ext:put(
   let $enable := if (map:get($params,"enable") = "true") then fn:true() else fn:false()
   let $_ := xdmp:log("Enabled? : " || xs:string($enable))
 
-  let $input := xdmp:unquote(xdmp:quote($input))
   let $modelid := wfi:install-and-convert($input,map:get($params,"name"),(map:get($params,"major"),"1")[1],(map:get($params,"minor"),"0")[1], $enable )
 
   let $out := <ext:createResponse><ext:outcome>SUCCESS</ext:outcome><ext:modelId>{$modelid}</ext:modelId></ext:createResponse>

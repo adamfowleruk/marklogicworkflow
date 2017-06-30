@@ -95,66 +95,59 @@ declare function m:getProcessInstanceAsset($processUri as xs:string,$assetname a
 };
 
 declare function m:setProcessAsset($assetname as xs:string,$asset as node(), $processName as xs:string,$major as xs:string?,$minor as xs:string?) as xs:string {
-  xdmp:eval(
-    'xquery version "1.0-ml";declare namespace wf="http://marklogic.com/workflow";' ||
-    'declare variable $wf:processName as xs:string external;' ||
-    'declare variable $wf:major as xs:string external;' ||
-    'declare variable $wf:minor as xs:string external;' ||
-    'declare variable $wf:assetname as xs:string external;' ||
-    'declare variable $wf:asset as node() external;' ||
-    'let $uri := "/workflowengine/assets/" || fn:string-join(($wf:processName,$wf:major,$wf:minor),"/") || "/" || $wf:assetname ' ||
-    'return (xdmp:document-insert($uri,$wf:asset),$uri)'
-    , (: TODO security permissions and properties for easy finding :)
-
-      (xs:QName("wf:processName"),$processName,xs:QName("wf:assetname"),$assetname,xs:QName("wf:major"),$major,
-       xs:QName("wf:minor"),$minor,xs:QName("wf:asset"),$asset),
-      <options xmlns="xdmp:eval">
-        <database>{xdmp:modules-database()}</database>
-        <isolation>different-transaction</isolation>
-      </options>
-    )  (: MUST be executed in the modules DB - where the assets live :)
+  xdmp:invoke-function(
+    function(){
+      let $uri := "/workflowengine/assets/" || fn:string-join(($processName, $major, $minor), "/") || "/" || $assetname 
+      return (
+        xdmp:document-insert($uri, $asset)
+        , $uri
+      )
+    }
+    ,
+    <options xmlns="xdmp:eval">
+      <database>{xdmp:modules-database()}</database>
+      <isolation>different-transaction</isolation>
+      <transaction-mode>update-auto-commit</transaction-mode>
+    </options>
+  ) (: MUST be executed in the modules DB - where the assets live :)
 };
 
 
 declare function m:deleteProcessAsset($assetname as xs:string,$processName as xs:string,$major as xs:string?,$minor as xs:string?) as xs:string {
-  xdmp:eval(
-    'xquery version "1.0-ml";declare namespace wf="http://marklogic.com/workflow";' ||
-    'declare variable $wf:processName as xs:string external;' ||
-    'declare variable $wf:major as xs:string external;' ||
-    'declare variable $wf:minor as xs:string external;' ||
-    'declare variable $wf:assetname as xs:string external;' ||
-    'let $uri := "/workflowengine/assets/" || fn:string-join(($wf:processName,$wf:major,$wf:minor),"/") || "/" || $wf:assetname ' ||
-    'return (xdmp:document-delete($uri),$uri)'
-    , (: TODO security test :)
-
-      (xs:QName("wf:processName"),$processName,xs:QName("wf:assetname"),$assetname,xs:QName("wf:major"),$major,
-       xs:QName("wf:minor"),$minor),
-      <options xmlns="xdmp:eval">
-        <database>{xdmp:modules-database()}</database>
-        <isolation>different-transaction</isolation>
-      </options>
-    )  (: MUST be executed in the modules DB - where the assets live :)
+  xdmp:invoke-function(
+    function(){
+      let $uri := "/workflowengine/assets/" || fn:string-join(($processName, $major, $minor),"/") || "/" || $assetname
+      return (
+        xdmp:document-delete($uri)
+        , $uri
+      )
+    }
+    ,
+    <options xmlns="xdmp:eval">
+      <database>{xdmp:modules-database()}</database>
+      <isolation>different-transaction</isolation>
+      <transaction-mode>update-auto-commit</transaction-mode>
+    </options>
+  ) (: MUST be executed in the modules DB - where the assets live :)
 };
 
 declare function m:getProcessAssets($assetname as xs:string?,$processName as xs:string,$major as xs:string?,$minor as xs:string?) as node()* {
-  xdmp:eval(
-    'xquery version "1.0-ml";declare namespace wf="http://marklogic.com/workflow";' ||
-    'declare variable $wf:processName as xs:string external;' ||
-    'declare variable $wf:major as xs:string external;' ||
-    'declare variable $wf:minor as xs:string external;' ||
-    'declare variable $wf:assetname as xs:string external;' ||
-    ' (fn:doc("/workflowengine/assets/" || $wf:processName || "/" || $wf:major || "/" || $wf:minor || "/" || $wf:assetname ),' ||
-    '  fn:doc("/workflowengine/assets/" || $wf:processName || "/" || $wf:major || "/" || "/" || $wf:assetname ),' ||
-    '  fn:doc("/workflowengine/assets/" || $wf:processName || "/" || $wf:assetname )' ||
-    ')[1]'
-    (: TODO support blank asset name by listing all processes within processName's URI folder :)
+  xdmp:invoke-function(
+    function(){
+      (
+        fn:doc("/workflowengine/assets/" || $processName || "/" || $major || "/" || $minor || "/" || $assetname )
+                                                          (: WARN: is this double slash intentional? :)
+        , fn:doc("/workflowengine/assets/" || $processName || "/" || $major || "/" || "/" || $assetname )
+        , fn:doc("/workflowengine/assets/" || $processName || "/" || $assetname )
+      )[1]
+      (: TODO support blank asset name by listing all processes within processName's URI folder :)
+    }
     ,
-      (xs:QName("wf:processName"),$processName,xs:QName("wf:assetname"),$assetname,xs:QName("wf:major"),$major,xs:QName("wf:minor"),$minor),
-      <options xmlns="xdmp:eval">
-        <database>{xdmp:modules-database()}</database>
-        <isolation>different-transaction</isolation>
-      </options>
-    )  (: MUST be executed in the modules DB - where the assets live :)
+    <options xmlns="xdmp:eval">
+      <database>{xdmp:modules-database()}</database>
+      <isolation>different-transaction</isolation>
+    </options>
+  ) (: MUST be executed in the modules DB - where the assets live :)
 };
 
 
@@ -356,14 +349,16 @@ declare function m:inProgress($processId as xs:string,$transition as xs:string) 
 };
 
 declare function m:transitionByPath($path as xs:string) as element(p:state-transition)? {
-  xdmp:eval('xquery version "1.0-ml";declare namespace m="http://marklogic.com/workflow"; import module namespace p="http://marklogic.com/cpf/pipelines" at "/MarkLogic/cpf/pipelines.xqy";declare variable $m:path as xs:string external;xdmp:unpath($m:path)',
-    (xs:QName("wf:path"),$path),
+  xdmp:invoke-function(
+    function(){
+      xdmp:unpath($path)
+    }
+    ,
     <options xmlns="xdmp:eval">
       <database>{xdmp:triggers-database()}</database>
       <isolation>different-transaction</isolation>
     </options>
   )
-    (:  :)
 };
 
 declare function m:failure($processUri as xs:string,$transition as node(),$failureReason as element(error:error)?,$detail as node()*) as empty-sequence() {
@@ -581,6 +576,8 @@ declare function m:evaluateOLD($processUri as xs:string,$namespaces as element(w
     return ($namespace/@short/text(),$namespace/@long/text())
   let $_ := xdmp:log("Namespaces:-")
   let $_ := xdmp:log($ns)
+  
+  let $_ := xdmp:log('[m:evaluateOLD] evaluating: ' || xdmp:quote($xp))
 
   let $result := xdmp:with-namespaces($ns, xdmp:eval('declare namespace wf="http://marklogic.com/workflow"; ' || $xp,(),()))
   let $_ := xdmp:log("wfu:evaluate: result:-")
@@ -602,7 +599,7 @@ declare function m:evaluate($processUri as xs:string,$namespaces as element(wf:n
     'xquery version "1.0-ml";declare namespace wf="http://marklogic.com/workflow";' || $ns ||
     'declare variable $wf:process as element(wf:process) external;' ||
     $xpath
-  let $_ := xdmp:log($xquery)
+  let $_ := xdmp:log('[m:evaluate] evaluating: ' || xdmp:quote($xquery))
   return
     xdmp:eval($xquery,
       (xs:QName("wf:process"),fn:doc($processUri)/wf:process),
@@ -615,7 +612,7 @@ declare function m:evaluate($processUri as xs:string,$namespaces as element(wf:n
 declare function m:evaluateXml($processUri as xs:string,$namespaces as element(wf:namespace)*,$xmlText as xs:string,$params as node()*) as node()* {
   let $xquery := 'xquery version "1.0-ml";declare namespace wf="http://marklogic.com/workflow";' ||
       'declare variable $wf:process as element(wf:process) external;' || $xmlText
-  let $_ := xdmp:log("wfu:evaluateXml: xquery: " || $xquery)
+  let $_ := xdmp:log('[m:evaluateXml] evaluating: ' || xdmp:quote($xquery))
   let $result :=
    xdmp:eval($xquery,
       (xs:QName("wf:process"),fn:doc($processUri)/wf:process), (: TODO accept external params without having blank params of () in the eval call :)

@@ -25,12 +25,18 @@ declare function m:install-and-convert($doc as node(),$filename as xs:string,$ma
   (: 1. Save document in to DB :)
   let $uri := "/workflow/models/" || $filename
   let $_ :=
-    xdmp:eval('xquery version "1.0-ml";import module namespace m="http://marklogic.com/workflow-import" at "/app/models/workflow-import.xqy";declare variable $m:uri as xs:string external;declare variable $m:doc as node() external;'
-      || 'xdmp:document-insert($m:uri,$m:doc,xdmp:default-permissions(),(xdmp:default-collections(),"http://marklogic.com/workflow/model"))'
+    xdmp:invoke-function(
+      function(){
+        xdmp:document-insert($uri
+          , $doc
+          , xdmp:default-permissions()
+          , (xdmp:default-collections(),"http://marklogic.com/workflow/model")
+        )
+      }
       ,
-      (xs:QName("m:uri"),$uri,xs:QName("m:doc"),$doc),
       <options xmlns="xdmp:eval">
         <isolation>different-transaction</isolation>
+        <transaction-mode>update-auto-commit</transaction-mode>
       </options>
     )
   (: 2. Convert to CPF :)
@@ -70,8 +76,11 @@ declare function m:ensureWorkflowPipelinesInstalled() as empty-sequence() {
   let $name := "MarkLogic Workflow Initial Selection"
   return
   try {
-    let $pexists := xdmp:eval('xquery version "1.0-ml";declare namespace m="http://marklogic.com/workflow"; import module namespace p="http://marklogic.com/cpf/pipelines" at "/MarkLogic/cpf/pipelines.xqy";declare variable $m:name as xs:string external;p:get($m:name)',
-      (xs:QName("wf:name"),$name),
+    let $pexists := xdmp:invoke-function(
+      function(){
+        p:get($name)
+      }
+      ,
       <options xmlns="xdmp:eval">
         <database>{xdmp:triggers-database()}</database>
         <isolation>different-transaction</isolation>
@@ -83,24 +92,46 @@ declare function m:ensureWorkflowPipelinesInstalled() as empty-sequence() {
 
     let $failureAction := p:action("/MarkLogic/cpf/actions/failure-action.xqy",(),())
     let $wfInitialPid :=
-          xdmp:eval('xquery version "1.0-ml";declare namespace m="http://marklogic.com/workflow"; import module namespace p="http://marklogic.com/cpf/pipelines" at "/MarkLogic/cpf/pipelines.xqy";declare variable $m:name as xs:string external;'
-            ||
-            'p:create($m:name,$m:name,p:action("/MarkLogic/cpf/actions/success-action.xqy",(),()),p:action("/MarkLogic/cpf/actions/failure-action.xqy",(),()),() (: status transitions :) ,('
-            ||
-            'p:state-transition(xs:anyURI("http://marklogic.com/states/initial"),"",(),xs:anyURI("http://marklogic.com/states/error"),(),p:action("/workflowengine/actions/workflowInitialSelection.xqy","BPMN2 Workflow initial process step selection",()),())'
-            || ') (: state transitions :)) '
-            ,
-            (xs:QName("wf:name"),$name),
-            <options xmlns="xdmp:eval">
-              <database>{xdmp:triggers-database()}</database>
-              <isolation>different-transaction</isolation>
-            </options>
+      xdmp:invoke-function(
+        function(){
+          p:create(
+            $m:name
+            , $m:name
+            , p:action("/MarkLogic/cpf/actions/success-action.xqy",(),())
+            , p:action("/MarkLogic/cpf/actions/failure-action.xqy",(),())
+            , () (: status transitions :)
+            , (
+              p:state-transition(
+                xs:anyURI("http://marklogic.com/states/initial")
+                , ""
+                , ()
+                , xs:anyURI("http://marklogic.com/states/error")
+                , ()
+                , p:action(
+                  "/workflowengine/actions/workflowInitialSelection.xqy"
+                  ,"BPMN2 Workflow initial process step selection"
+                  ,()
+                )
+                , ()
+              )            
+            )
           )
+        }
+        ,
+        <options xmlns="xdmp:eval">
+          <database>{xdmp:triggers-database()}</database>
+          <isolation>different-transaction</isolation>
+          <transaction-mode>update-auto-commit</transaction-mode>
+        </options>
+      )
     let $_ := xdmp:log("Installing workflow initial pipeline " || $name)
     let $_ := xdmp:log($wfInitialPid)
     let $wfInitial :=
-      xdmp:eval('xquery version "1.0-ml";declare namespace m="http://marklogic.com/workflow"; import module namespace p="http://marklogic.com/cpf/pipelines" at "/MarkLogic/cpf/pipelines.xqy";declare variable $m:name as xs:string external;p:get($m:name)',
-        (xs:QName("wf:name"),$name),
+      xdmp:invoke-function(
+        function(){
+          p:get($name)
+        }
+        ,
         <options xmlns="xdmp:eval">
           <database>{xdmp:triggers-database()}</database>
           <isolation>different-transaction</isolation>
@@ -109,12 +140,15 @@ declare function m:ensureWorkflowPipelinesInstalled() as empty-sequence() {
     let $_ := xdmp:log("Workflow initial pipeline XML:-")
     let $_ := xdmp:log($wfInitial)
     let $installedPipelinePid :=
-
-      xdmp:eval('xquery version "1.0-ml";declare namespace m="http://marklogic.com/workflow"; import module namespace p="http://marklogic.com/cpf/pipelines" at "/MarkLogic/cpf/pipelines.xqy";declare variable $m:xml as element(p:pipeline) external;p:insert($m:xml)',
-        (xs:QName("wf:xml"),$wfInitial),
+      xdmp:invoke-function(
+        function(){
+          p:insert($wfInitial)
+        }
+        ,
         <options xmlns="xdmp:eval">
           <database>{xdmp:triggers-database()}</database>
           <isolation>different-transaction</isolation>
+          <transaction-mode>update-auto-commit</transaction-mode>
         </options>
       )
     return ()
@@ -129,8 +163,11 @@ declare function m:convert-to-cpf($processmodeluri as xs:string,$major as xs:str
   (: 1. Create Pipeline from raw process model :)
   (: Determine type from root element :)
   let $pmap :=
-    xdmp:eval('xquery version "1.0-ml";import module namespace m="http://marklogic.com/workflow-import" at "/app/models/workflow-import.xqy";declare variable $m:processmodeluri as xs:string external;declare variable $m:major as xs:string external;declare variable $m:minor as xs:string external;m:create($m:processmodeluri,$m:major,$m:minor)',
-      (xs:QName("m:processmodeluri"),$processmodeluri,xs:QName("m:major"),$major,xs:QName("m:minor"),$minor),
+    xdmp:invoke-function(
+      function(){
+        m:create($processmodeluri, $major, $minor)
+      }
+      ,
       <options xmlns="xdmp:eval">
         <isolation>different-transaction</isolation>
       </options>
@@ -156,8 +193,11 @@ declare function m:convert-to-cpf($processmodeluri as xs:string,$major as xs:str
     (: 2. Get this pipeline's URI :)
     (: let $puri := "http://marklogic.com/cpf/pipelines/"||xs:string($localPipelineId)||".xml" :)
     let $puri :=
-      xdmp:eval('xquery version "1.0-ml";import module namespace p="http://marklogic.com/cpf/pipelines" at "/MarkLogic/cpf/pipelines.xqy";import module namespace m="http://marklogic.com/workflow-import" at "/app/models/workflow-import.xqy";declare variable $m:id as xs:string external;p:get($m:id)/fn:base-uri(.)',
-        (xs:QName("m:id"),$pname),
+      xdmp:invoke-function(
+        function(){
+          p:get($pname)/fn:base-uri(.)
+        }
+        ,
         <options xmlns="xdmp:eval">
           <isolation>different-transaction</isolation>
         </options>
@@ -166,13 +206,15 @@ declare function m:convert-to-cpf($processmodeluri as xs:string,$major as xs:str
 
     (: 3. Install pipeline in modules DB (so that CPF runs it) and get the MODULES DB PID (not content db pid as above) :)
     let $pid :=
-      xdmp:eval('xquery version "1.0-ml";import module namespace m="http://marklogic.com/workflow-import" at "/app/models/workflow-import.xqy";declare variable $m:puri as xs:string external;m:install($m:puri)',
-        (xs:QName("m:puri"),$puri),
+      xdmp:invoke-function(
+        function(){
+          m:install($puri)
+        }
+        ,
         <options xmlns="xdmp:eval">
           <isolation>different-transaction</isolation>
         </options>
       )
-
     let $_ := xdmp:log("In wfi:convert-to-cpf: installed pid: " || $pid || " for pname: " || $pname)
 
 
@@ -251,32 +293,46 @@ declare function m:create($processmodeluri as xs:string,$major as xs:string,$min
   let $removeDoc :=
     try {
     (:if (fn:not(fn:empty(p:get($name)))) then:)
-      xdmp:eval('xquery version "1.0-ml";declare namespace m="http://marklogic.com/workflow"; import module namespace p="http://marklogic.com/cpf/pipelines" at "/MarkLogic/cpf/pipelines.xqy";declare variable $m:puri as xs:string external;( (: p:remove($m:puri), :) for $pn in p:pipelines()/p:pipeline-name return if (fn:substring(xs:string($pn),1,fn:string-length($m:puri)) = $m:puri) then (xdmp:log("Deleting pipeline: "||xs:string($pn)), p:remove(xs:string($pn)) ) else ()  )',
-        (xs:QName("wf:puri"),$name),
+      xdmp:invoke-function(
+        function(){
+          ( 
+            (: p:remove($name), :) 
+            for $pn in p:pipelines()/p:pipeline-name
+            return if (fn:substring(xs:string($pn),1,fn:string-length($name)) = $name) then 
+              (
+                xdmp:log("Deleting pipeline: "||xs:string($pn))
+                , p:remove(xs:string($pn)) 
+              ) 
+            else ()  
+          )
+        }
+        ,
         <options xmlns="xdmp:eval">
           <database>{xdmp:database()}</database>
           <isolation>different-transaction</isolation>
+          <transaction-mode>update-auto-commit</transaction-mode>
         </options>
       )
     (: else
       () :)
-    } catch ($e) { () } (: catching pipeline throwing error if it doesn't exist. We can safely ignore this :)
+    } catch ($e) {
+      xdmp:log('delete encountered error: ' || xdmp:quote($e)) 
+    } (: catching pipeline throwing error if it doesn't exist. We can safely ignore this :)
 
   (: NOTE above also removes all child pipelines too - those starting with PROCESS__MAJOR__MINOR :)
   let $_ := xdmp:log("wfi:create : Now recreating pipeline(s)")
   let $pmap :=
-        xdmp:eval('xquery version "1.0-ml";import module namespace m="http://marklogic.com/workflow-import" at "/app/models/workflow-import.xqy";'
-          || 'declare variable $m:pname as xs:string external;'
-          || 'declare variable $m:root as element() external;'
-          || 'm:do-create($m:pname,$m:root)'
-          ,
-          (xs:QName("m:pname"),$name,xs:QName("m:root"),$root),
-          <options xmlns="xdmp:eval">
-            <database>{xdmp:database()}</database>
-            <isolation>different-transaction</isolation>
-          </options>
-        ) (: TODO handle failure gracefully :)
-
+    xdmp:invoke-function(
+      function(){
+        m:do-create($name,$root)
+      }
+      ,
+      <options xmlns="xdmp:eval">
+        <database>{xdmp:database()}</database>
+        <isolation>different-transaction</isolation>
+        <transaction-mode>update-auto-commit</transaction-mode>
+      </options>
+    ) (: TODO handle failure gracefully :)
   return
     $pmap
 
@@ -308,17 +364,16 @@ declare function m:do-create($pipelineName as xs:string,$root as element()) as m
 (: ASync CPF utility routines :)
 
 declare function m:get-pipeline-id($pname as xs:string) as xs:unsignedLong {
-    xdmp:eval(
-     'xquery version "1.0-ml";declare namespace m="http://marklogic.com/workflow"; ' ||
-     'import module namespace p="http://marklogic.com/cpf/pipelines" at "/MarkLogic/cpf/pipelines.xqy"; ' ||
-     'declare variable $m:processmodeluri as xs:string external; xs:unsignedLong(p:get($m:processmodeluri)/p:pipeline-id)'
-     ,
-      (xs:QName("wf:processmodeluri"),$pname),
-      <options xmlns="xdmp:eval">
-        <database>{xdmp:triggers-database()}</database>
-        <isolation>different-transaction</isolation>
-      </options>
-    )
+  xdmp:invoke-function(
+    function(){
+      xs:unsignedLong(p:get($pname)/p:pipeline-id)
+    }
+    ,
+    <options xmlns="xdmp:eval">
+      <database>{xdmp:triggers-database()}</database>
+      <isolation>different-transaction</isolation>
+    </options>
+  )
 };
 
 declare function m:install($puri as xs:string) as xs:unsignedLong {
@@ -331,26 +386,45 @@ declare function m:install($puri as xs:string) as xs:unsignedLong {
     if (fn:not(fn:empty(p:get($puri)))) then
       let $_ := xdmp:log("wfi:install: Removing pipeline config: " || $puri)
       return
-      xdmp:eval('xquery version "1.0-ml";declare namespace m="http://marklogic.com/workflow"; import module namespace p="http://marklogic.com/cpf/pipelines" at "/MarkLogic/cpf/pipelines.xqy";declare variable $m:puri as xs:string external;( (: p:remove($m:puri), :) for $pn in p:pipelines()/p:pipeline-name return if (fn:substring(xs:string($pn),1,fn:string-length($m:puri)) = $m:puri) then (xdmp:log("Deleting pipeline: "||xs:string($pn)), p:remove(xs:string($pn)) ) else ()  )',
-        (xs:QName("wf:puri"),$puri),
-        <options xmlns="xdmp:eval">
-          <database>{xdmp:triggers-database()}</database>
-          <isolation>different-transaction</isolation>
-        </options>
-      )
+        xdmp:invoke-function(
+          function(){
+            (
+              (: p:remove($puri), :)
+              for $pn in p:pipelines()/p:pipeline-name 
+              return if (fn:substring(xs:string($pn),1,fn:string-length($puri)) = $puri) then
+                (
+                  xdmp:log("Deleting pipeline: "||xs:string($pn))
+                  , p:remove(xs:string($pn)) 
+                ) 
+              else ()
+            )
+          }
+          ,
+          <options xmlns="xdmp:eval">
+            <database>{xdmp:triggers-database()}</database>
+            <isolation>different-transaction</isolation>
+            <transaction-mode>update-auto-commit</transaction-mode>
+          </options>
+        )
     else
       ()
-    } catch ($e) { () } (: catching pipeline throwing error if it doesn't exist. We can safely ignore this :)
+    } catch ($e) {
+      xdmp:log('delete encountered error: ' || xdmp:quote($e)) 
+    } (: catching pipeline throwing error if it doesn't exist. We can safely ignore this :)
 
   let $_ := xdmp:log("wfi:install: Adding pipeline config: " || $puri)
 
   (: Recreate pipeline :)
   return
-    xdmp:eval('xquery version "1.0-ml";declare namespace m="http://marklogic.com/workflow"; import module namespace p="http://marklogic.com/cpf/pipelines" at "/MarkLogic/cpf/pipelines.xqy";declare variable $m:pxml as element(p:pipeline) external;p:insert($m:pxml)',
-      (xs:QName("wf:pxml"),$pxml),
+    xdmp:invoke-function(
+      function(){
+        p:insert($pxml)
+      }
+      ,
       <options xmlns="xdmp:eval">
         <database>{xdmp:triggers-database()}</database>
         <isolation>different-transaction</isolation>
+        <transaction-mode>update-auto-commit</transaction-mode>
       </options>
     )
 };
@@ -370,28 +444,29 @@ declare function m:domain((: $processmodeluri as xs:string,$major as xs:string,$
   let $remove :=
     try {
     if (fn:not(fn:empty(
-      xdmp:eval(
-       'xquery version "1.0-ml";declare namespace m="http://marklogic.com/workflow"; import module namespace dom = "http://marklogic.com/cpf/domains" at "/MarkLogic/cpf/domains.xqy";declare variable $m:processmodeluri as xs:string external; dom:get($m:processmodeluri)'
-       ,
-        (xs:QName("wf:processmodeluri"),$pname),
+      xdmp:invoke-function(
+        function(){
+          dom:get($pname)
+        }
+        ,
         <options xmlns="xdmp:eval">
           <database>{xdmp:triggers-database()}</database>
           <isolation>different-transaction</isolation>
         </options>
       )
-     ))) then
+    ))) then
 
-     let $_ := xdmp:log(" GOT DOMAIN TO REMOVE")
-     return
-      xdmp:eval(
-        'xquery version "1.0-ml";declare namespace m="http://marklogic.com/workflow"; import module namespace dom = "http://marklogic.com/cpf/domains" at "/MarkLogic/cpf/domains.xqy";declare variable $m:processmodeluri as xs:string external;'
-        ||
-        'dom:remove($m:processmodeluri)'
+    let $_ := xdmp:log(" GOT DOMAIN TO REMOVE")
+    return
+      xdmp:invoke-function(
+        function(){
+          dom:remove($pname)
+        }
         ,
-        (xs:QName("wf:processmodeluri"),$pname),
         <options xmlns="xdmp:eval">
           <database>{xdmp:triggers-database()}</database>
           <isolation>different-transaction</isolation>
+          <transaction-mode>update-auto-commit</transaction-mode>
         </options>
       )
     else
@@ -400,21 +475,35 @@ declare function m:domain((: $processmodeluri as xs:string,$major as xs:string,$
 
   (: Configure domain :)
   return
-    xdmp:eval(
-      'xquery version "1.0-ml";declare namespace m="http://marklogic.com/workflow"; import module namespace p="http://marklogic.com/cpf/pipelines" at "/MarkLogic/cpf/pipelines.xqy"; import module namespace dom = "http://marklogic.com/cpf/domains" at "/MarkLogic/cpf/domains.xqy";declare variable $m:pname as xs:string external;declare variable $m:pid as xs:unsignedLong external;declare variable $m:mdb as xs:unsignedLong external;'
-      ||
-      '(xdmp:log("calling dom:create for " || $m:pname), '
-      ||
-      'dom:create($m:pname,"Execute process given a process data document for "||$m:pname,'
-      ||
-      'dom:domain-scope("directory","/workflow/processes/"||$m:pname||"/","1"),dom:evaluation-context($m:mdb,"/"),((for $pipe in p:pipelines()[p:pipeline-name = ("Status Change Handling","MarkLogic Workflow Initial Selection")]/p:pipeline-id return xs:unsignedLong($pipe)),$m:pid),())'
-      ||
-      ')'
+    xdmp:invoke-function(
+      function(){
+        (
+          xdmp:log("calling dom:create for " || $m:pname)
+          , dom:create(
+            $pname
+            , "Execute process given a process data document for "||$pname
+            , dom:domain-scope(
+              "directory"
+              , "/workflow/processes/"||$pname||"/"
+              ,"1"
+            )
+            , dom:evaluation-context($mdb,"/")
+            ,(
+              (
+                for $pipe in p:pipelines()[p:pipeline-name = ("Status Change Handling","MarkLogic Workflow Initial Selection")]/p:pipeline-id 
+                return xs:unsignedLong($pipe)
+              )
+              ,$pid
+            )
+            ,()
+          )
+        )
+      }
       ,
-      (xs:QName("wf:pid"),$pid,xs:QName("wf:mdb"),$mdb,xs:QName("wf:pname"),$pname),
       <options xmlns="xdmp:eval">
         <database>{xdmp:triggers-database()}</database>
         <isolation>different-transaction</isolation>
+        <transaction-mode>update-auto-commit</transaction-mode>
       </options>
     )
 };
